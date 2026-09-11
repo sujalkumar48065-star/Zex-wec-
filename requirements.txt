@@ -1,0 +1,7 @@
+python-telegram-bot==22.8
+flask>=3.0
+gunicorn>=21.2
+aiosqlite>=0.20.0
+aiomysql>=0.2.0
+psutil>=5.9
+cryptography>=42.0

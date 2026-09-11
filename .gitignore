@@ -1,0 +1,6 @@
+hosting_data/
+*.db
+.env
+__pycache__/
+*.pyc
+hosting_data_start.out
