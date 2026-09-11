@@ -69,7 +69,7 @@ def _keep_alive():
 
 threading.Thread(target=_keep_alive, daemon=True).start()
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 app = Flask(__name__)
 
 @app.route('/')
@@ -79,6 +79,19 @@ def home():
 @app.route('/health')
 def health():
     return jsonify(status='ok', bot='running'), 200
+
+@app.route('/webhook/<secret>', methods=['POST'])
+def webhook(secret):
+    global _bot_alive
+    if not bot_module.bot_polling_alive():
+        return jsonify(status='bot_stopped'), 503
+    if secret != os.environ.get('HOSTING_WEBHOOK_SECRET', 's3cret_wbhk'):
+        return jsonify(msg='bad secret'), 403
+    payload = request.get_json(force=True, silent=True) or {}
+    ok = bot_module.deliver_webhook_update(payload)
+    if not ok:
+        return jsonify(status='queued_or_failed'), 202
+    return jsonify(status='ok'), 200
 
 PORT = int(os.environ.get('PORT', 10000))
 log.info('Health server on port %d', PORT)
