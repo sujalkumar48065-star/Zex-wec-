@@ -6096,17 +6096,26 @@ def deliver_webhook_update(payload: dict) -> bool:
     app = _application
     loop = _loop
     if app is None or loop is None:
+        logger.error("deliver_webhook_update: app=%s loop=%s", app, loop)
         return False
     try:
         from telegram import Update as _Update
         update = _Update.de_json(payload, app.bot)
         if update is None:
+            logger.error("deliver_webhook_update: de_json returned None for payload keys=%s", list(payload.keys()))
             return False
+        logger.info("deliver_webhook_update: update_id=%s type=%s chat=%s user=%s text=%s",
+                    getattr(update, 'update_id', None),
+                    update.effective_message.effective_chat.type if update.effective_chat else 'none',
+                    update.effective_chat.id if update.effective_chat else 'none',
+                    update.effective_user.id if update.effective_user else 'none',
+                    (update.effective_message.text or '')[:50] if update.effective_message else 'none')
         future = asyncio.run_coroutine_threadsafe(app.process_update(update), loop)
         future.result(timeout=30)
+        logger.info("deliver_webhook_update: process_update completed for update_id=%s", getattr(update, 'update_id', None))
         return True
     except Exception as exc:
-        logger.error("deliver_webhook_update failed: %s", exc)
+        logger.error("deliver_webhook_update failed: %s", exc, exc_info=True)
         return False
 
 

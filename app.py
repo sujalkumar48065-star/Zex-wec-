@@ -89,6 +89,7 @@ def webhook(secret):
         return jsonify(msg='bad secret'), 403
     payload = request.get_json(force=True, silent=True) or {}
     ok = bot_module.deliver_webhook_update(payload)
+    log.info('Webhook update: update_id=%s delivered=%s', (payload.get('update_id')), ok)
     if not ok:
         return jsonify(status='queued_or_failed'), 202
     return jsonify(status='ok'), 200
