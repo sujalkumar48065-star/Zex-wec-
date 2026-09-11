@@ -6090,6 +6090,38 @@ async def _run_async():
         await asyncio.sleep(3600)
 
 
+async def _run_polling_async():
+    """Reliable 24/7 mode: long polling (no webhook needed). Suitable for
+    servers that stay up (e.g. Render) — updates are fetched directly from
+    Telegram, so there is no dependency on webhook delivery."""
+    global _application, _loop
+    missing = _missing_config()
+    if missing:
+        logger.error(missing)
+        print(f"ERROR: {missing}. Please set it as an environment variable and run again.")
+        return
+    application = _build_application()
+    _application = application
+    _loop = asyncio.get_running_loop()
+    try:
+        await application.bot.delete_webhook(drop_pending_updates=True)
+        logger.info("Old webhook cleared")
+    except Exception as exc:
+        logger.warning("Could not clear webhook: %s", exc)
+    logger.info("Telegram Hosting Panel starting (polling mode)...")
+    await application.initialize()
+    await application.post_init(application)
+    await application.start()
+    application.updater.start_polling(
+        allowed_updates=Update.ALL_TYPES,
+        drop_pending_updates=True,
+        bootstrap_retries=-1,
+    )
+    logger.info("Polling started — updates will be fetched directly from Telegram")
+    while True:
+        await asyncio.sleep(3600)
+
+
 def deliver_webhook_update(payload: dict) -> bool:
     """Called from the Flask (web) thread. Feeds a received webhook update into
     the running asyncio application loop."""
@@ -6104,12 +6136,14 @@ def deliver_webhook_update(payload: dict) -> bool:
         if update is None:
             logger.error("deliver_webhook_update: de_json returned None for payload keys=%s", list(payload.keys()))
             return False
-        logger.info("deliver_webhook_update: update_id=%s type=%s chat=%s user=%s text=%s",
+        msg = update.effective_message
+        ch = update.effective_chat
+        usr = update.effective_user
+        logger.info("deliver_webhook_update: update_id=%s chat=%s user=%s text=%s",
                     getattr(update, 'update_id', None),
-                    update.effective_message.effective_chat.type if update.effective_chat else 'none',
-                    update.effective_chat.id if update.effective_chat else 'none',
-                    update.effective_user.id if update.effective_user else 'none',
-                    (update.effective_message.text or '')[:50] if update.effective_message else 'none')
+                    ch.id if ch else 'none',
+                    usr.id if usr else 'none',
+                    (msg.text or '')[:50] if msg else 'none')
         future = asyncio.run_coroutine_threadsafe(app.process_update(update), loop)
         future.result(timeout=30)
         logger.info("deliver_webhook_update: process_update completed for update_id=%s", getattr(update, 'update_id', None))

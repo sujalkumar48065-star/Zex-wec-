@@ -35,7 +35,7 @@ def _run_bot():
             asyncio.run(tidb_aiosqlite.bootstrap())
         except Exception as e:
             log.warning('TiDB skip: %s', e)
-        asyncio.run(bot_module._run_async())
+        asyncio.run(bot_module._run_polling_async())
 
     failures = 0
     while True:
