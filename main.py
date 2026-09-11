@@ -6112,7 +6112,7 @@ async def _run_polling_async():
     await application.initialize()
     await application.post_init(application)
     await application.start()
-    application.updater.start_polling(
+    await application.updater.start_polling(
         allowed_updates=Update.ALL_TYPES,
         drop_pending_updates=True,
         bootstrap_retries=-1,
