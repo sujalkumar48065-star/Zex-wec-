@@ -5823,6 +5823,7 @@ async def on_document(update, context):
 
 async def cmd_start(update, context):
     user = update.effective_user
+    logger.info("CMD_START by user %s id=%s chat=%s", user.first_name or '?', user.id, update.effective_chat.id)
     await register_user(user.id, user.first_name or (user.username or ""))
     if not await require(user.id, "admin"):
         text, rows = paid_screen()
